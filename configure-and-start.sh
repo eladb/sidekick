@@ -5,6 +5,11 @@
 # service manager. This is the one script that needs AUTH_TOKEN/SERVER_ID.
 set -euo pipefail
 
+# cloud-init/first-boot runs this with no HOME set, which makes some tools
+# (e.g. `caddy hash-password`) warn about missing user config dirs. Give them
+# a sane HOME.
+export HOME="${HOME:-/root}"
+
 : "${AUTH_TOKEN:?AUTH_TOKEN env var is required}"
 : "${SERVER_ID:?SERVER_ID env var is required}"
 

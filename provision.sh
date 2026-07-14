@@ -37,7 +37,7 @@ log "installing base packages"
 apt-get update -y
 apt-get install -y --no-install-recommends \
   curl ca-certificates gnupg jq openssl \
-  python3 python3-pip python3-venv \
+  python3 python3-pip python3-venv python3-dev build-essential \
   supervisor \
   chromium \
   xvfb openbox xserver-xorg-core x11-utils x11-xkb-utils x11-xserver-utils \
