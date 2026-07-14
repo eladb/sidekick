@@ -31,6 +31,13 @@ apt-get install -y --no-install-recommends \
   libpulse0 pulseaudio
 
 ARCH="$(dpkg --print-architecture)"
+# ttyd's release assets are named by uname-style arch (x86_64/aarch64), not
+# dpkg's (amd64/arm64), so map to the uname form for that download.
+case "$ARCH" in
+  amd64) UNAME_ARCH="x86_64" ;;
+  arm64) UNAME_ARCH="aarch64" ;;
+  *) UNAME_ARCH="$(uname -m)" ;;
+esac
 
 log "installing cloudflared"
 mkdir -p --mode=0755 /usr/share/keyrings
@@ -50,7 +57,7 @@ apt-get update -y
 apt-get install -y caddy
 
 log "installing ttyd"
-curl -fsSL "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.${ARCH}" -o /usr/local/bin/ttyd
+curl -fsSL "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.${UNAME_ARCH}" -o /usr/local/bin/ttyd
 chmod +x /usr/local/bin/ttyd
 
 log "installing selkies"

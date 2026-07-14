@@ -21,13 +21,13 @@
 	# tell it about a reverse-proxy prefix, so a prefixed route would break
 	# the follow-up WebSocket connection every CDP client makes.
 	handle /json* {
-		basicauth {
+		basic_auth {
 			sidekick __AUTH_TOKEN_BCRYPT_HASH__
 		}
 		reverse_proxy 127.0.0.1:9222
 	}
 	handle /devtools/* {
-		basicauth {
+		basic_auth {
 			sidekick __AUTH_TOKEN_BCRYPT_HASH__
 		}
 		reverse_proxy 127.0.0.1:9222
