@@ -26,6 +26,13 @@ mkdir -p "$SIDEKICK_HOME"
 mkdir -p /etc/apt/apt.conf.d
 echo 'DPkg::Lock::Timeout "600";' > /etc/apt/apt.conf.d/99sidekick-lock
 
+# Some cloud base images (e.g. Hetzner's Debian 12) ship with root's password
+# marked expired. That makes chfn — invoked by package postinst scripts that
+# create system users (pulseaudio's `pulse` user is the one that bites) — fail
+# with "authentication token is no longer valid", which aborts apt under
+# `set -e`. Clear the expiry so those postinsts succeed.
+chage -d "$(date +%Y-%m-%d)" -M -1 root 2>/dev/null || true
+
 log "installing base packages"
 apt-get update -y
 apt-get install -y --no-install-recommends \
