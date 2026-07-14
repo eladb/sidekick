@@ -1,0 +1,53 @@
+# Rendered into /etc/sidekick/Caddyfile by configure-and-start.sh, which
+# substitutes __AUTH_TOKEN_BCRYPT_HASH__ with `caddy hash-password` output.
+#
+# Auth strategy: services that have their own auth (Selkies, ttyd) enforce it
+# themselves using the plaintext token, so they're just proxied here as-is.
+# Chrome's DevTools protocol has no auth of its own, so it's the one thing
+# gated at this layer, via Caddy's basicauth. execd checks the Authorization
+# header itself. Every service uses the SAME credential (`sidekick` /
+# <auth_token>) so a client only ever needs to remember one thing.
+{
+	admin off
+}
+
+:80 {
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	# Chrome DevTools Protocol. Deliberately not prefixed — Chrome's own
+	# /json/version response reports these exact root paths with no way to
+	# tell it about a reverse-proxy prefix, so a prefixed route would break
+	# the follow-up WebSocket connection every CDP client makes.
+	handle /json* {
+		basicauth {
+			sidekick __AUTH_TOKEN_BCRYPT_HASH__
+		}
+		reverse_proxy 127.0.0.1:9222
+	}
+	handle /devtools/* {
+		basicauth {
+			sidekick __AUTH_TOKEN_BCRYPT_HASH__
+		}
+		reverse_proxy 127.0.0.1:9222
+	}
+
+	# execd: agent-facing command exec API. Auth is checked in execd itself.
+	handle /exec {
+		reverse_proxy 127.0.0.1:8090
+	}
+
+	# ttyd: browser-based shell. Auth is checked by ttyd itself (-c flag).
+	handle /shell* {
+		reverse_proxy 127.0.0.1:7681
+	}
+
+	# Everything else: the Selkies watch-along UI + its own WebSocket.
+	# Mounted at root deliberately (no prefix) since Selkies' bundled web
+	# client assumes root-relative asset paths. Auth is checked by Selkies
+	# itself (--basic_auth_user/--basic_auth_password).
+	handle {
+		reverse_proxy 127.0.0.1:8081
+	}
+}

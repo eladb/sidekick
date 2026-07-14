@@ -1,0 +1,80 @@
+# Rendered into /etc/supervisor/conf.d/sidekick.conf by
+# configure-and-start.sh, which substitutes __AUTH_TOKEN__ and
+# __SELKIES_EXTRA_ARGS__.
+
+[program:xvfb]
+command=/usr/bin/Xvfb :99 -screen 0 1280x800x24 -nolisten tcp
+autorestart=true
+priority=10
+stdout_logfile=/var/log/sidekick/xvfb.log
+stderr_logfile=/var/log/sidekick/xvfb.log
+
+[program:pulseaudio]
+command=/usr/bin/pulseaudio --exit-idle-time=-1 --daemonize=no
+environment=PULSE_RUNTIME_PATH="/tmp/pulse"
+autorestart=true
+priority=15
+stdout_logfile=/var/log/sidekick/pulseaudio.log
+stderr_logfile=/var/log/sidekick/pulseaudio.log
+
+[program:openbox]
+command=/usr/bin/openbox
+environment=DISPLAY=":99"
+autorestart=true
+priority=20
+stdout_logfile=/var/log/sidekick/openbox.log
+stderr_logfile=/var/log/sidekick/openbox.log
+
+[program:chromium]
+command=/usr/bin/chromium --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0 --remote-allow-origins=* --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1280,800 --start-maximized about:blank
+environment=DISPLAY=":99",PULSE_SERVER="unix:/tmp/pulse/native"
+autorestart=true
+priority=30
+stdout_logfile=/var/log/sidekick/chromium.log
+stderr_logfile=/var/log/sidekick/chromium.log
+
+[program:selkies]
+command=/usr/local/bin/selkies --addr=0.0.0.0 --port=8081 --enable_https=false --basic_auth_user=sidekick --basic_auth_password=__AUTH_TOKEN__ --encoder=h264enc --enable_resize=false __SELKIES_EXTRA_ARGS__
+environment=DISPLAY=":99",PULSE_SERVER="unix:/tmp/pulse/native"
+autorestart=true
+priority=40
+stdout_logfile=/var/log/sidekick/selkies.log
+stderr_logfile=/var/log/sidekick/selkies.log
+
+[program:ttyd]
+command=/usr/local/bin/ttyd -p 7681 -b /shell -c sidekick:__AUTH_TOKEN__ bash
+autorestart=true
+priority=40
+stdout_logfile=/var/log/sidekick/ttyd.log
+stderr_logfile=/var/log/sidekick/ttyd.log
+
+[program:execd]
+command=/usr/bin/python3 /opt/sidekick/execd/execd.py
+environment=SIDEKICK_AUTH_TOKEN="__AUTH_TOKEN__",SIDEKICK_EXECD_PORT="8090"
+autorestart=true
+priority=40
+stdout_logfile=/var/log/sidekick/execd.log
+stderr_logfile=/var/log/sidekick/execd.log
+
+[program:caddy]
+command=/usr/bin/caddy run --config /etc/sidekick/Caddyfile --adapter caddyfile
+autorestart=true
+priority=50
+stdout_logfile=/var/log/sidekick/caddy.log
+stderr_logfile=/var/log/sidekick/caddy.log
+
+[program:cloudflared]
+command=/usr/bin/cloudflared tunnel --url http://localhost:80 --no-autoupdate --logfile /var/log/sidekick/cloudflared.log
+autorestart=true
+priority=60
+stdout_logfile=/var/log/sidekick/cloudflared-stdout.log
+stderr_logfile=/var/log/sidekick/cloudflared-stdout.log
+
+[program:tunnel-watcher]
+command=/usr/local/bin/sidekick-tunnel-watcher
+autorestart=true
+priority=70
+stdout_logfile=/dev/stdout
+stdout_logfile_maxbytes=0
+stderr_logfile=/dev/stdout
+stderr_logfile_maxbytes=0
