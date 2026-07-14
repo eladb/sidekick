@@ -79,13 +79,11 @@ log "installing ttyd"
 curl -fsSL "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.${UNAME_ARCH}" -o /usr/local/bin/ttyd
 chmod +x /usr/local/bin/ttyd
 
-log "installing selkies"
-SELKIES_VERSION="$(curl -fsSL https://api.github.com/repos/selkies-project/selkies/releases/latest | jq -r '.tag_name' | sed 's/[^0-9.-]*//g')"
-curl -fsSL -o "/tmp/selkies-${SELKIES_VERSION}-py3-none-any.whl" \
-  "https://github.com/selkies-project/selkies/releases/download/v${SELKIES_VERSION}/selkies-${SELKIES_VERSION}-py3-none-any.whl"
-PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --no-cache-dir --force-reinstall \
-  "/tmp/selkies-${SELKIES_VERSION}-py3-none-any.whl"
-rm -f "/tmp/selkies-${SELKIES_VERSION}-py3-none-any.whl"
+log "installing selkies (from PyPI)"
+# PyPI ships the selkies wheel directly; simpler and more robust than
+# constructing a GitHub release-asset URL (whose tag/filename scheme has
+# drifted across versions).
+PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --no-cache-dir selkies
 
 log "installing execd (bundled, no external deps)"
 mkdir -p "$SIDEKICK_HOME/execd"
