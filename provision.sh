@@ -19,6 +19,13 @@ export DEBIAN_FRONTEND=noninteractive
 SIDEKICK_HOME=/opt/sidekick
 mkdir -p "$SIDEKICK_HOME"
 
+# On a fresh cloud VM, cloud-init / unattended-upgrades often still hold the
+# dpkg lock when we start. Without this, apt-get fails immediately ("Could
+# not get lock") and, under `set -e`, aborts provisioning before anything is
+# installed. This makes every apt-get invocation wait for the lock instead.
+mkdir -p /etc/apt/apt.conf.d
+echo 'DPkg::Lock::Timeout "600";' > /etc/apt/apt.conf.d/99sidekick-lock
+
 log "installing base packages"
 apt-get update -y
 apt-get install -y --no-install-recommends \
@@ -55,6 +62,11 @@ curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
   > /etc/apt/sources.list.d/caddy-stable.list
 apt-get update -y
 apt-get install -y caddy
+# The Debian caddy package enables+starts caddy.service on :80 with a default
+# config. We run our own Caddy under supervisord instead, so stop and disable
+# the packaged service to free :80 (|| true so it's harmless during a
+# container image build where systemd isn't running).
+systemctl disable --now caddy 2>/dev/null || true
 
 log "installing ttyd"
 curl -fsSL "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.${UNAME_ARCH}" -o /usr/local/bin/ttyd
