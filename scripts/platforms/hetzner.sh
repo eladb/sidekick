@@ -25,7 +25,7 @@ command -v websocat >/dev/null 2>&1 || {
   exit 1
 }
 
-SERVER_TYPE="${SIDEKICK_HETZNER_TYPE:-cx32}"
+SERVER_TYPE="${SIDEKICK_HETZNER_TYPE:-cpx22}"
 LOCATION="${SIDEKICK_HETZNER_LOCATION:-nbg1}"
 REPO="${SIDEKICK_REPO:-eladb/sidekick}"
 REPO_REF="${SIDEKICK_REPO_REF:-main}"

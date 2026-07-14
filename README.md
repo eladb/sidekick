@@ -55,13 +55,14 @@ password `auth_token`), so each `*_url` is ready to use as-is:
 - **`cdp_url`** — point Playwright/Puppeteer at this
   (`chromium.connectOverCDP(cdp_url)`) to drive the remote browser.
 - **`watch_url`** — open in a browser tab to watch the browser live
-  (Selkies).
+  (noVNC).
 - **`shell_url`** — open in a browser tab for an interactive terminal
   (ttyd), or drive it programmatically over its WebSocket protocol.
 - **`exec_url`** — `POST` `{"cmd": "...", "cwd": "...", "timeout_sec": ...}`
-  for clean programmatic command execution; response is newline-delimited
-  JSON: `{"stream":"stdout"|"stderr","data":"..."}` lines followed by
-  `{"exit_code": N}`.
+  for clean programmatic command execution; `cmd` runs through a shell
+  (`bash -lc`), so pipes, `&&`, and redirection work. Response is
+  newline-delimited JSON: `{"stream":"stdout"|"stderr","data":"..."}` lines
+  followed by `{"exit_code": N}`.
 
 **The token is a root-equivalent bearer credential.** Anyone who has it can
 run arbitrary commands on the box. Treat it exactly like an SSH private key
@@ -71,11 +72,11 @@ env, never commit it, never paste it somewhere public.
 ## Architecture
 
 One `provision.sh` installs everything with plain `apt-get` (Chromium,
-Xvfb, Selkies, ttyd, a small `execd` service, Caddy, cloudflared) —
-supervisord manages the process tree either inside a container (fly.io, or
-the optional Docker path) or directly on a bare Debian VM (EC2, Hetzner).
-There's no hard Docker dependency: EC2 and Hetzner install straight onto
-the OS via cloud-init, no container runtime involved.
+Xvfb/openbox, x11vnc + noVNC/websockify, ttyd, a small `execd` service,
+Caddy, cloudflared) — supervisord manages the process tree either inside a
+container (fly.io, or the optional Docker path) or directly on a bare Debian
+VM (EC2, Hetzner). There's no hard Docker dependency: EC2 and Hetzner install
+straight onto the OS via cloud-init, no container runtime involved.
 
 Cloudflare's free quick tunnel (`cloudflared tunnel --url ...`) is the only
 ingress path — no inbound ports are opened anywhere, which is also why none
@@ -92,27 +93,32 @@ Caddy fronts everything on port 80 behind the tunnel:
 | `/json*`, `/devtools/*`   | Chromium CDP (9222) | Caddy `basicauth`             |
 | `/exec`                   | execd (8090)        | checked by execd itself       |
 | `/shell*`                 | ttyd (7681)         | checked by ttyd itself        |
-| everything else (root)    | Selkies (8081)      | checked by Selkies itself     |
+| everything else (root)    | noVNC (6080)        | Caddy `basic_auth`            |
 
-CDP and Selkies are deliberately **not** proxied under a prefix like
-`/cdp`/`/watch`: Chrome's DevTools endpoint reports its own paths
-(`/json/version`, `/devtools/browser/<id>`) at the root with no way to tell
-it about a reverse-proxy prefix, and Selkies' bundled web client assumes
-root-relative asset paths. Prefixing either would break on the client's
-very next request. `/exec` and `/shell` don't have that problem (execd is
-ours, and ttyd supports `--base-path`), so they get real prefixes.
+CDP is deliberately **not** proxied under a prefix like `/cdp`: Chrome's
+DevTools endpoint reports its own paths (`/json/version`,
+`/devtools/browser/<id>`) at the root with no way to tell it about a
+reverse-proxy prefix, so prefixing would break the client's follow-up
+WebSocket connection. The noVNC viewer likewise lives at the root
+(`/vnc.html` + its assets + the `/websockify` WebSocket). `/exec` and
+`/shell` don't have that problem (execd is ours, and ttyd supports
+`--base-path`), so they get real prefixes.
 
-## Watch-along transport
+## Watch-along
 
-Selkies defaults to its **WebSocket transport**: a single TCP stream, no
-STUN/TURN, works through the Cloudflare tunnel on every platform including
-ones with no public IP (fly.io, and sandboxed "cloud container" agent
-environments). Its WebRTC transport is available as an opt-in
-(`SIDEKICK_WATCH_TRANSPORT=webrtc`) for lower latency, but WebRTC's actual
-media path is a separate UDP/TCP connection that the tunnel does **not**
-carry — on a host with a public IP (EC2, Hetzner) it typically just
-connects directly, but on a NAT'd host you'll need to supply a TURN relay
-via `SIDEKICK_TURN_*` env vars (see `.env.example`) for it to work at all.
+The live viewer is **x11vnc + noVNC/websockify**: x11vnc exposes the
+Chromium display (`:99`) as VNC on localhost, and websockify serves the
+noVNC web client and bridges the browser's WebSocket to it. This streams
+over a single WebSocket that traverses the Cloudflare tunnel on **every**
+platform — including ones with no public IP (fly.io, sandboxed "cloud
+container" agent environments) — with no STUN/TURN and no GStreamer. noVNC
+has no auth of its own, so Caddy gates the root with `basic_auth` using the
+same token as everything else.
+
+(An earlier design used Selkies for lower-latency WebRTC streaming, but the
+shipping Selkies build requires a heavy GStreamer stack and a TURN relay for
+its media path to cross the tunnel; noVNC is the simpler, tunnel-native
+choice.)
 
 ## Known limitations (MVP)
 
@@ -121,15 +127,18 @@ via `SIDEKICK_TURN_*` env vars (see `.env.example`) for it to work at all.
   subdomain, invalidating the token's `base_url`. A named Cloudflare Tunnel
   (stable hostname, requires a free Cloudflare account) is the natural
   upgrade path here and may land later.
-- Hetzner's serial-console URL scrape (`hcloud server request-console`)
-  hasn't been exercised against a live account in development — if it times
-  out, the script prints a manual fallback (check the console in the
-  Hetzner dashboard).
+- **Installer URL-discovery on Hetzner is not final.** The *server* deploys
+  and runs correctly on Hetzner (verified end-to-end: browser/CDP, exec,
+  shell, noVNC watch, tunnel), but Hetzner exposes only a *graphical* VNC
+  console — no text console API — so the installer can't scrape the tunnel
+  URL from logs the way it can on Docker/fly/EC2. The planned fix is a
+  rendezvous where the box reports its assembled token back over an
+  ephemeral tunnel the installer runs; that piece is still to be wired into
+  `scripts/platforms/hetzner.sh`.
 - Debian 12 is the target OS (Ubuntu's `chromium-browser` package is a snap
   wrapper that doesn't work in a container or a minimal cloud-init install).
-- Audio capture (pulseaudio → Selkies) is wired up but hasn't been verified
-  against a live stream; the watch-along view is guaranteed to work for
-  video even if audio turns out to need more tuning.
+- The watch-along view is video-only (no audio); noVNC/VNC doesn't carry
+  audio.
 
 ## Roadmap
 
