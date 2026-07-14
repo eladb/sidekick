@@ -33,7 +33,7 @@ SERVER_NAME="sidekick-${SERVER_ID}"
 
 USER_DATA_FILE="$(mktemp)"
 trap 'rm -f "$USER_DATA_FILE"' EXIT
-SIDEKICK_ENV="AUTH_TOKEN=${AUTH_TOKEN} SERVER_ID=${SERVER_ID} SIDEKICK_WATCH_TRANSPORT=${SIDEKICK_WATCH_TRANSPORT:-websocket}"
+SIDEKICK_ENV="AUTH_TOKEN=${AUTH_TOKEN} SERVER_ID=${SERVER_ID}"
 cat > "$USER_DATA_FILE" <<EOF
 #cloud-config
 # Each runcmd entry is its own shell invocation (cloud-init does not persist

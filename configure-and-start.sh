@@ -23,24 +23,7 @@ AUTH_TOKEN_BCRYPT_HASH="$(caddy hash-password --plaintext "$AUTH_TOKEN")"
 sed "s#__AUTH_TOKEN_BCRYPT_HASH__#${AUTH_TOKEN_BCRYPT_HASH}#g" \
   /etc/sidekick/Caddyfile.tmpl > /etc/sidekick/Caddyfile
 
-SELKIES_EXTRA_ARGS=""
-if [ "${SIDEKICK_WATCH_TRANSPORT:-websocket}" = "webrtc" ]; then
-  log "watch-along transport: webrtc"
-  SELKIES_EXTRA_ARGS="--mode=webrtc"
-  [ -n "${SIDEKICK_STUN_HOST:-}" ] && SELKIES_EXTRA_ARGS+=" --stun_host=${SIDEKICK_STUN_HOST}"
-  [ -n "${SIDEKICK_STUN_PORT:-}" ] && SELKIES_EXTRA_ARGS+=" --stun_port=${SIDEKICK_STUN_PORT}"
-  [ -n "${SIDEKICK_TURN_HOST:-}" ] && SELKIES_EXTRA_ARGS+=" --turn_host=${SIDEKICK_TURN_HOST}"
-  [ -n "${SIDEKICK_TURN_PORT:-}" ] && SELKIES_EXTRA_ARGS+=" --turn_port=${SIDEKICK_TURN_PORT}"
-  [ -n "${SIDEKICK_TURN_PROTOCOL:-}" ] && SELKIES_EXTRA_ARGS+=" --turn_protocol=${SIDEKICK_TURN_PROTOCOL}"
-  [ -n "${SIDEKICK_TURN_USERNAME:-}" ] && SELKIES_EXTRA_ARGS+=" --turn_username=${SIDEKICK_TURN_USERNAME}"
-  [ -n "${SIDEKICK_TURN_PASSWORD:-}" ] && SELKIES_EXTRA_ARGS+=" --turn_password=${SIDEKICK_TURN_PASSWORD}"
-  [ -n "${SIDEKICK_TURN_SHARED_SECRET:-}" ] && SELKIES_EXTRA_ARGS+=" --turn_shared_secret=${SIDEKICK_TURN_SHARED_SECRET}"
-else
-  log "watch-along transport: websocket (default, no STUN/TURN needed)"
-fi
-
-sed -e "s#__AUTH_TOKEN__#${AUTH_TOKEN}#g" \
-    -e "s#__SELKIES_EXTRA_ARGS__#${SELKIES_EXTRA_ARGS}#g" \
+sed "s#__AUTH_TOKEN__#${AUTH_TOKEN}#g" \
   /etc/sidekick/supervisord.sidekick.conf.tmpl > /etc/supervisor/conf.d/sidekick.conf
 
 if [ "${SIDEKICK_INIT:-systemd}" = "container" ]; then

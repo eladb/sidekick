@@ -46,7 +46,6 @@ cat > "$USER_DATA_FILE" <<EOF
 set -x
 export AUTH_TOKEN='${AUTH_TOKEN}'
 export SERVER_ID='${SERVER_ID}'
-export SIDEKICK_WATCH_TRANSPORT='${SIDEKICK_WATCH_TRANSPORT:-websocket}'
 mkdir -p /opt/sidekick-src
 curl -fsSL "https://github.com/${REPO}/archive/refs/heads/${REPO_REF}.tar.gz" \\
   | tar xz -C /opt/sidekick-src --strip-components=1

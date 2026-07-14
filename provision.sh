@@ -28,21 +28,20 @@ echo 'DPkg::Lock::Timeout "600";' > /etc/apt/apt.conf.d/99sidekick-lock
 
 # Some cloud base images (e.g. Hetzner's Debian 12) ship with root's password
 # marked expired. That makes chfn — invoked by package postinst scripts that
-# create system users (pulseaudio's `pulse` user is the one that bites) — fail
-# with "authentication token is no longer valid", which aborts apt under
-# `set -e`. Clear the expiry so those postinsts succeed.
+# create system users — fail with "authentication token is no longer valid",
+# which would abort apt under `set -e`. Clear the expiry defensively.
 chage -d "$(date +%Y-%m-%d)" -M -1 root 2>/dev/null || true
 
 log "installing base packages"
 apt-get update -y
 apt-get install -y --no-install-recommends \
   curl ca-certificates gnupg jq openssl \
-  python3 python3-pip python3-venv python3-dev build-essential \
+  python3 \
   supervisor \
   chromium \
   xvfb openbox xserver-xorg-core x11-utils x11-xkb-utils x11-xserver-utils \
   libx11-xcb1 libxcb-dri3-0 libxkbcommon0 libxdamage1 libxfixes3 libxtst6 libxext6 \
-  libpulse0 pulseaudio
+  x11vnc novnc websockify
 
 ARCH="$(dpkg --print-architecture)"
 # ttyd's release assets are named by uname-style arch (x86_64/aarch64), not
@@ -79,11 +78,9 @@ log "installing ttyd"
 curl -fsSL "https://github.com/tsl0922/ttyd/releases/latest/download/ttyd.${UNAME_ARCH}" -o /usr/local/bin/ttyd
 chmod +x /usr/local/bin/ttyd
 
-log "installing selkies (from PyPI)"
-# PyPI ships the selkies wheel directly; simpler and more robust than
-# constructing a GitHub release-asset URL (whose tag/filename scheme has
-# drifted across versions).
-PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install --no-cache-dir selkies
+# Watch-along is x11vnc + noVNC/websockify (installed above via apt): it
+# streams over a single WebSocket that traverses the Cloudflare tunnel with no
+# TURN/STUN and no GStreamer, which the shipping Selkies could not do.
 
 log "installing execd (bundled, no external deps)"
 mkdir -p "$SIDEKICK_HOME/execd"

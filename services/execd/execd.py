@@ -11,7 +11,6 @@ import base64
 import hmac
 import json
 import os
-import shlex
 import subprocess
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -83,8 +82,12 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(b"%x\r\n%b\r\n" % (len(data), data))
 
     def _run_streaming(self, cmd, cwd, timeout_sec):
+        # Run through a shell so agents get the semantics they expect from a
+        # command string: pipes, &&/||, redirections, globs, env expansion.
+        # A list cmd is still honored verbatim (no shell) for callers that
+        # want exact argv control.
         proc = subprocess.Popen(
-            shlex.split(cmd) if isinstance(cmd, str) else cmd,
+            cmd if isinstance(cmd, list) else ["/bin/bash", "-lc", cmd],
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

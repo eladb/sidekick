@@ -36,7 +36,6 @@ docker run -d \
   -e AUTH_TOKEN="$AUTH_TOKEN" \
   -e SERVER_ID="$SERVER_ID" \
   -e SIDEKICK_INIT=container \
-  -e SIDEKICK_WATCH_TRANSPORT="${SIDEKICK_WATCH_TRANSPORT:-websocket}" \
   "$IMAGE" >/dev/null
 
 echo "==> waiting for tunnel URL"

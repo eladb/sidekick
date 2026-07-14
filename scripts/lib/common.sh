@@ -37,7 +37,7 @@ sidekick_build_token() {
   local host="${base_url#https://}"
   local json
   json=$(cat <<EOF
-{"v":1,"server_id":"${server_id}","base_url":"${base_url}","auth_token":"${auth_token}","cdp_url":"https://sidekick:${auth_token}@${host}","watch_url":"https://sidekick:${auth_token}@${host}","shell_url":"https://sidekick:${auth_token}@${host}/shell","exec_url":"https://sidekick:${auth_token}@${host}/exec","platform":"${platform}","created_at":"${created_at}"}
+{"v":1,"server_id":"${server_id}","base_url":"${base_url}","auth_token":"${auth_token}","cdp_url":"https://sidekick:${auth_token}@${host}","watch_url":"https://sidekick:${auth_token}@${host}/vnc.html?autoconnect=true&reconnect=true","shell_url":"https://sidekick:${auth_token}@${host}/shell","exec_url":"https://sidekick:${auth_token}@${host}/exec","platform":"${platform}","created_at":"${created_at}"}
 EOF
 )
   printf '%s' "$json" | base64 | tr -d '\n' | tr '+/' '-_' | tr -d '='
