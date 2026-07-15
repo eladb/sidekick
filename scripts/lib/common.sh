@@ -12,8 +12,9 @@ sidekick_gen_server_id() {
 # Polls an arbitrary "give me recent logs" command until it contains a
 # SIDEKICK_TUNNEL_URL=... sentinel line, or times out. Platform scripts pass
 # in whatever log-fetch command fits them (`docker logs`, `fly logs`,
-# `aws ec2 get-console-output ...`, a websocat one-shot read of Hetzner's
-# console stream, ...) — this function has no platform-specific knowledge.
+# `aws ec2 get-console-output ...`) — this function has no platform-specific
+# knowledge. Hetzner can't use this (no text console); it uses the rendezvous
+# in scripts/lib/rendezvous.sh instead.
 sidekick_wait_for_tunnel_url() {
   local log_cmd="$1" timeout_sec="${2:-180}" interval=5 waited=0 url=""
   while [ "$waited" -lt "$timeout_sec" ]; do

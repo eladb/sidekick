@@ -17,6 +17,27 @@ touch "$LOGFILE"
 
 last_url=""
 
+# When the installer deployed us via a platform that can't scrape our logs
+# (Hetzner), it hands us a return-path rendezvous URL + secret. On the first
+# tunnel URL we see, POST it back so the installer learns where we are. Retried
+# a few times in case the installer's receiver isn't quite up yet.
+report_rendezvous() {
+  local url="$1"
+  [ -n "${SIDEKICK_RENDEZVOUS_URL:-}" ] || return 0
+  local body attempt
+  body="{\"server_id\":\"${SERVER_ID:-}\",\"base_url\":\"${url}\"}"
+  for attempt in 1 2 3 4 5 6; do
+    if curl -fsS -m 10 -X POST "${SIDEKICK_RENDEZVOUS_URL%/}/report" \
+        -H "X-Sidekick-Rendezvous: ${SIDEKICK_RENDEZVOUS_SECRET:-}" \
+        -H "Content-Type: application/json" -d "$body" >/dev/null 2>&1; then
+      echo "reported tunnel URL to rendezvous"
+      return 0
+    fi
+    sleep 5
+  done
+  echo "warning: could not reach rendezvous URL after retries" >&2
+}
+
 announce() {
   local url="$1"
   local line="SIDEKICK_TUNNEL_URL=${url}"
@@ -24,6 +45,7 @@ announce() {
   if [ -w /dev/console ]; then
     echo "$line" > /dev/console 2>/dev/null || true
   fi
+  report_rendezvous "$url"
 }
 
 tail -F -n0 "$LOGFILE" 2>/dev/null | while IFS= read -r line; do

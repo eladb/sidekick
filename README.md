@@ -27,8 +27,11 @@ scripts/install.sh --platform docker    # any Docker host you already have
 ```
 
 Required tooling per platform: `flyctl` for fly.io, `aws` (configured) for
-EC2, `hcloud` + `websocat` for Hetzner, `docker` for the Docker path. Each
-script fails fast with a clear message if its CLI is missing.
+EC2, `hcloud` + `cloudflared` + `python3` for Hetzner, `docker` for the
+Docker path. Each script fails fast with a clear message if its CLI is
+missing. (Hetzner needs `cloudflared` because it has no text console to
+scrape — the box reports its URL back over a return-path tunnel the
+installer runs; see the note in "Known limitations".)
 
 ## The token
 
@@ -127,14 +130,16 @@ choice.)
   subdomain, invalidating the token's `base_url`. A named Cloudflare Tunnel
   (stable hostname, requires a free Cloudflare account) is the natural
   upgrade path here and may land later.
-- **Installer URL-discovery on Hetzner is not final.** The *server* deploys
-  and runs correctly on Hetzner (verified end-to-end: browser/CDP, exec,
-  shell, noVNC watch, tunnel), but Hetzner exposes only a *graphical* VNC
-  console — no text console API — so the installer can't scrape the tunnel
-  URL from logs the way it can on Docker/fly/EC2. The planned fix is a
-  rendezvous where the box reports its assembled token back over an
-  ephemeral tunnel the installer runs; that piece is still to be wired into
-  `scripts/platforms/hetzner.sh`.
+- **Hetzner uses a return-path rendezvous for URL discovery.** Hetzner
+  exposes only a *graphical* VNC console — no text console API — so the
+  installer can't scrape the tunnel URL from logs the way it can on
+  Docker/fly/EC2. Instead the installer runs a tiny receiver behind its own
+  ephemeral `cloudflared` tunnel and the box POSTs its URL back
+  (`scripts/lib/rendezvous.sh`). This means the Hetzner installer must run
+  somewhere with outbound reach to Cloudflare's edge (TCP/UDP 7844); in a
+  locked-down sandbox that blocks it, run the Hetzner deploy from a host with
+  open egress. The other platforms don't need this — they scrape logs and
+  work anywhere.
 - Debian 12 is the target OS (Ubuntu's `chromium-browser` package is a snap
   wrapper that doesn't work in a container or a minimal cloud-init install).
 - The watch-along view is video-only (no audio); noVNC/VNC doesn't carry

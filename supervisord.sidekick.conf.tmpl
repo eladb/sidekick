@@ -74,6 +74,7 @@ stderr_logfile=/var/log/sidekick/cloudflared-stdout.log
 
 [program:tunnel-watcher]
 command=/usr/local/bin/sidekick-tunnel-watcher
+environment=SERVER_ID="__SERVER_ID__",SIDEKICK_RENDEZVOUS_URL="__RENDEZVOUS_URL__",SIDEKICK_RENDEZVOUS_SECRET="__RENDEZVOUS_SECRET__"
 autorestart=true
 priority=70
 stdout_logfile=/var/log/sidekick/tunnel-watcher.log

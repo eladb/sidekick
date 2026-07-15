@@ -23,7 +23,13 @@ AUTH_TOKEN_BCRYPT_HASH="$(caddy hash-password --plaintext "$AUTH_TOKEN")"
 sed "s#__AUTH_TOKEN_BCRYPT_HASH__#${AUTH_TOKEN_BCRYPT_HASH}#g" \
   /etc/sidekick/Caddyfile.tmpl > /etc/sidekick/Caddyfile
 
-sed "s#__AUTH_TOKEN__#${AUTH_TOKEN}#g" \
+# Rendezvous vars are optional — only Hetzner sets them (see
+# scripts/lib/rendezvous.sh). Empty values leave tunnel-watcher in
+# log-emit-only mode, which is what every other platform uses.
+sed -e "s#__AUTH_TOKEN__#${AUTH_TOKEN}#g" \
+    -e "s#__SERVER_ID__#${SERVER_ID}#g" \
+    -e "s#__RENDEZVOUS_URL__#${SIDEKICK_RENDEZVOUS_URL:-}#g" \
+    -e "s#__RENDEZVOUS_SECRET__#${SIDEKICK_RENDEZVOUS_SECRET:-}#g" \
   /etc/sidekick/supervisord.sidekick.conf.tmpl > /etc/supervisor/conf.d/sidekick.conf
 
 if [ "${SIDEKICK_INIT:-systemd}" = "container" ]; then
