@@ -26,12 +26,14 @@ scripts/install.sh --platform hetzner   # Hetzner Cloud, no SSH key needed
 scripts/install.sh --platform docker    # any Docker host you already have
 ```
 
-Required tooling per platform: `flyctl` for fly.io, `aws` (configured) for
-EC2, `hcloud` + `cloudflared` + `python3` for Hetzner, `docker` for the
-Docker path. Each script fails fast with a clear message if its CLI is
-missing. (Hetzner needs `cloudflared` because it has no text console to
-scrape — the box reports its URL back over a return-path tunnel the
-installer runs; see the note in "Known limitations".)
+Required tooling per platform: `FLY_API_TOKEN` (env) + `python3` for fly.io,
+`aws` (configured) for EC2, `hcloud` + `cloudflared` + `python3` for Hetzner,
+`docker` for the Docker path. Each script fails fast with a clear message if
+its dependency is missing. (fly.io is driven straight through the fly Machines
+API — no `flyctl` needed, just a token like Hetzner's `hcloud`. Hetzner needs
+`cloudflared` because it has no text console to scrape — the box reports its
+URL back over a return-path tunnel the installer runs; see the note in "Known
+limitations".)
 
 ## The token
 
@@ -78,8 +80,18 @@ One `provision.sh` installs everything with plain `apt-get` (Chromium,
 Xvfb/openbox, x11vnc + noVNC/websockify, ttyd, a small `execd` service,
 Caddy, cloudflared) — supervisord manages the process tree either inside a
 container (fly.io, or the optional Docker path) or directly on a bare Debian
-VM (EC2, Hetzner). There's no hard Docker dependency: EC2 and Hetzner install
-straight onto the OS via cloud-init, no container runtime involved.
+VM (EC2, Hetzner). Every platform builds itself the same way: **there is no
+prebuilt image to publish**. EC2 and Hetzner run `provision.sh` at first boot
+via cloud-init; fly.io runs it at machine boot on a stock `debian:bookworm-slim`
+(the machine's init command fetches the source and provisions in container
+mode). The Dockerfile bakes the same `provision.sh` at build time for the
+optional Docker path. There's no hard Docker dependency anywhere: EC2, Hetzner,
+and fly install straight onto the OS, no container runtime involved on the box.
+
+(The fly first boot therefore installs Chromium et al. via apt on every fresh
+machine — ~10-12 min on fly's default shared CPUs, vs ~4 min on a Hetzner
+cpx22. Bumping `SIDEKICK_FLY_CPUS` speeds it up. This is the same
+build-from-source tradeoff the other platforms already make.)
 
 Cloudflare's free quick tunnel (`cloudflared tunnel --url ...`) is the only
 ingress path — no inbound ports are opened anywhere, which is also why none
