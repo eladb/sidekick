@@ -20,7 +20,11 @@ mkdir -p /var/log/sidekick /etc/sidekick
 log "hashing auth token for Caddy basicauth"
 AUTH_TOKEN_BCRYPT_HASH="$(caddy hash-password --plaintext "$AUTH_TOKEN")"
 
-sed "s#__AUTH_TOKEN_BCRYPT_HASH__#${AUTH_TOKEN_BCRYPT_HASH}#g" \
+# Bcrypt hash for the CDP basic_auth; raw token for the watch route's
+# query-param/cookie auth. Substitute the hash first so the longer placeholder
+# is consumed before the shorter __AUTH_TOKEN__ pass.
+sed -e "s#__AUTH_TOKEN_BCRYPT_HASH__#${AUTH_TOKEN_BCRYPT_HASH}#g" \
+    -e "s#__AUTH_TOKEN__#${AUTH_TOKEN}#g" \
   /etc/sidekick/Caddyfile.tmpl > /etc/sidekick/Caddyfile
 
 # Rendezvous vars are optional — only Hetzner sets them (see
