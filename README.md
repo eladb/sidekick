@@ -46,7 +46,7 @@ The token is `base64url(JSON)`. Decoded, it looks like:
   "base_url": "https://xxxx.trycloudflare.com",
   "auth_token": "…",
   "cdp_url": "https://sidekick:…@xxxx.trycloudflare.com",
-  "watch_url": "https://sidekick:…@xxxx.trycloudflare.com",
+  "watch_url": "https://xxxx.trycloudflare.com/vnc.html?autoconnect=true&reconnect=true&token=…",
   "shell_url": "https://sidekick:…@xxxx.trycloudflare.com/shell",
   "exec_url": "https://sidekick:…@xxxx.trycloudflare.com/exec",
   "platform": "fly",
@@ -54,13 +54,16 @@ The token is `base64url(JSON)`. Decoded, it looks like:
 }
 ```
 
-Every service shares one credential (HTTP Basic Auth, username `sidekick`,
-password `auth_token`), so each `*_url` is ready to use as-is:
+Every service is gated by the same secret (`auth_token`), so each `*_url` is
+ready to use as-is. The programmatic URLs (`cdp_url`, `shell_url`, `exec_url`)
+embed it as HTTP Basic Auth (username `sidekick`); the `watch_url` carries it as
+a `?token=` query param instead, because it's meant to be opened in a browser
+and browsers strip the credentials from `user:pass@host` URLs.
 
 - **`cdp_url`** — point Playwright/Puppeteer at this
   (`chromium.connectOverCDP(cdp_url)`) to drive the remote browser.
-- **`watch_url`** — open in a browser tab to watch the browser live
-  (noVNC).
+- **`watch_url`** — a plain clickable link (token in the query string); open it
+  in a browser tab to watch the browser live (noVNC), no login prompt.
 - **`shell_url`** — open in a browser tab for an interactive terminal
   (ttyd), or drive it programmatically over its WebSocket protocol.
 - **`exec_url`** — `POST` `{"cmd": "...", "cwd": "...", "timeout_sec": ...}`
@@ -78,20 +81,23 @@ env, never commit it, never paste it somewhere public.
 
 One `provision.sh` installs everything with plain `apt-get` (Chromium,
 Xvfb/openbox, x11vnc + noVNC/websockify, ttyd, a small `execd` service,
-Caddy, cloudflared) — supervisord manages the process tree either inside a
-container (fly.io, or the optional Docker path) or directly on a bare Debian
-VM (EC2, Hetzner). Every platform builds itself the same way: **there is no
-prebuilt image to publish**. EC2 and Hetzner run `provision.sh` at first boot
-via cloud-init; fly.io runs it at machine boot on a stock `debian:bookworm-slim`
-(the machine's init command fetches the source and provisions in container
-mode). The Dockerfile bakes the same `provision.sh` at build time for the
-optional Docker path. There's no hard Docker dependency anywhere: EC2, Hetzner,
-and fly install straight onto the OS, no container runtime involved on the box.
+Caddy, cloudflared); `configure-and-start.sh` then renders the runtime config
+from the secrets and starts supervisord. That split — install (no secrets) vs
+configure (secrets, at start) — is the whole trick: the same `provision.sh`
+feeds two delivery models, and secrets are never baked into an image.
 
-(The fly first boot therefore installs Chromium et al. via apt on every fresh
-machine — ~10-12 min on fly's default shared CPUs, vs ~4 min on a Hetzner
-cpx22. Bumping `SIDEKICK_FLY_CPUS` speeds it up. This is the same
-build-from-source tradeoff the other platforms already make.)
+- **Container platforms (fly.io, Docker)** pull a **prebuilt image**
+  (`ghcr.io/eladb/sidekick`, built from the `Dockerfile` by GitHub Actions on
+  every change to the image inputs). fly boots it in ~1-2 min; the image's
+  entrypoint runs `configure-and-start.sh` with the secrets injected at runtime.
+- **Bare-VM platforms (EC2, Hetzner)** run `provision.sh` at first boot via
+  cloud-init, straight onto the OS — no container runtime on the box.
+
+fly.io defaults to the image but also accepts `SIDEKICK_FROM_SOURCE=1` to boot a
+stock `debian:bookworm-slim` and install from source at boot instead (~10-12 min
+on fly's shared CPUs — handy for hacking on `provision.sh` from a branch). So no
+platform is locked to a published artifact, and the bare-VM path needs no
+registry at all.
 
 Cloudflare's free quick tunnel (`cloudflared tunnel --url ...`) is the only
 ingress path — no inbound ports are opened anywhere, which is also why none
@@ -108,7 +114,7 @@ Caddy fronts everything on port 80 behind the tunnel:
 | `/json*`, `/devtools/*`   | Chromium CDP (9222) | Caddy `basicauth`             |
 | `/exec`                   | execd (8090)        | checked by execd itself       |
 | `/shell*`                 | ttyd (7681)         | checked by ttyd itself        |
-| everything else (root)    | noVNC (6080)        | Caddy `basic_auth`            |
+| everything else (root)    | noVNC (6080)        | Caddy `?token=` + cookie      |
 
 CDP is deliberately **not** proxied under a prefix like `/cdp`: Chrome's
 DevTools endpoint reports its own paths (`/json/version`,
@@ -126,9 +132,14 @@ Chromium display (`:99`) as VNC on localhost, and websockify serves the
 noVNC web client and bridges the browser's WebSocket to it. This streams
 over a single WebSocket that traverses the Cloudflare tunnel on **every**
 platform — including ones with no public IP (fly.io, sandboxed "cloud
-container" agent environments) — with no STUN/TURN and no GStreamer. noVNC
-has no auth of its own, so Caddy gates the root with `basic_auth` using the
-same token as everything else.
+container" agent environments) — with no STUN/TURN and no GStreamer. noVNC has
+no auth of its own, so Caddy gates it — but **not** with `basic_auth`: the
+`watch_url` is pasted into a browser, and browsers strip the credentials from
+`user:pass@host` URLs, so an embedded-credential link silently fails. Instead
+Caddy validates a `?token=<auth_token>` query param on the first load and stamps
+it into a cookie; the noVNC assets and the `/websockify` WebSocket then
+authenticate via that cookie (cookies ride the same-origin WS upgrade), so the
+link works in any browser with no prompt.
 
 (An earlier design used Selkies for lower-latency WebRTC streaming, but the
 shipping Selkies build requires a heavy GStreamer stack and a TURN relay for
