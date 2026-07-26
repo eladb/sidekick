@@ -1,10 +1,37 @@
 # sidekick
 
+**A persistent box your AI agent deploys for itself — remote browser, live
+watch-along, and shell/exec, over a free Cloudflare Tunnel. No inbound ports,
+no SSH, no Docker on the box.**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Container image](https://img.shields.io/badge/ghcr.io-eladb%2Fsidekick-blue)](https://github.com/eladb/sidekick/pkgs/container/sidekick)
+[![Publish image](https://github.com/eladb/sidekick/actions/workflows/publish.yml/badge.svg)](https://github.com/eladb/sidekick/actions/workflows/publish.yml)
+
 A self-hosted "agent sidekick" server: a persistent box your AI agent can
 deploy for itself and keep coming back to across sessions. It ships with a
 remote, CDP-drivable browser, a live watch-along view, and a shell/exec
 API — all exposed through a free Cloudflare Tunnel, with no inbound ports,
 no SSH, and no Docker required on the box.
+
+## Why
+
+AI agents are stateless between sessions — every run starts from a blank box.
+sidekick gives an agent one persistent machine of its own: it deploys the
+server once, gets back a single token, and reconnects to the *same* browser
+and shell from any future session, anywhere. Because everything rides a
+Cloudflare quick tunnel, it works even on hosts with no public IP and nothing
+to SSH into — and you can watch it work in real time from a browser tab.
+
+## Demo
+
+> **TODO (pre-launch):** drop a GIF/asciicast here. Two clips land best:
+> (1) `scripts/install.sh --platform fly` running end-to-end to the printed
+> token, and (2) the **watch-along** view showing the agent driving Chromium
+> live. A short (~15s) loop of the watch-along is the single highest-value
+> asset for the Show HN post.
+
+<!-- ![watch-along demo](docs/launch/assets/watch-along.gif) -->
 
 ## Quickstart
 
