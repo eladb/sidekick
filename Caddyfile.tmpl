@@ -1,0 +1,72 @@
+# Rendered into /etc/sidekick/Caddyfile by configure-and-start.sh, which
+# substitutes __AUTH_TOKEN_BCRYPT_HASH__ with `caddy hash-password` output and
+# __AUTH_TOKEN__ with the raw auth token (used by the cookie/query-param auth on
+# the watch route below).
+#
+# Auth strategy: ttyd enforces its own auth (its -c flag) and execd checks the
+# Authorization header itself, so those are proxied as-is. Chrome's DevTools
+# protocol is gated here with basic_auth (its clients are programmatic and send
+# credentials fine). The noVNC watch UI is gated with a token query-param +
+# cookie instead of basic_auth, because it's opened by pasting a URL into a
+# browser (see the note on that route). Every service uses the SAME credential
+# (`sidekick` / <auth_token>) so a client only ever needs to remember one thing.
+{
+	admin off
+}
+
+:80 {
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	# Chrome DevTools Protocol. Deliberately not prefixed — Chrome's own
+	# /json/version response reports these exact root paths with no way to
+	# tell it about a reverse-proxy prefix, so a prefixed route would break
+	# the follow-up WebSocket connection every CDP client makes.
+	handle /json* {
+		basic_auth {
+			sidekick __AUTH_TOKEN_BCRYPT_HASH__
+		}
+		reverse_proxy 127.0.0.1:9222
+	}
+	handle /devtools/* {
+		basic_auth {
+			sidekick __AUTH_TOKEN_BCRYPT_HASH__
+		}
+		reverse_proxy 127.0.0.1:9222
+	}
+
+	# execd: agent-facing command exec API. Auth is checked in execd itself.
+	handle /exec {
+		reverse_proxy 127.0.0.1:8090
+	}
+
+	# ttyd: browser-based shell. Auth is checked by ttyd itself (-c flag).
+	handle /shell* {
+		reverse_proxy 127.0.0.1:7681
+	}
+
+	# Everything else: the noVNC watch-along UI (/vnc.html, its assets, and the
+	# /websockify WebSocket) served by websockify on :6080. noVNC has no auth of
+	# its own.
+	#
+	# We deliberately do NOT use basic_auth here. The watch UI is opened by
+	# pasting a URL into a browser, and browsers strip the credentials from
+	# https://user:pass@host/... URLs (anti-phishing), so an embedded-credential
+	# link silently fails to authenticate. Instead the watch_url carries the
+	# token as a query param (?token=<auth_token>); on the first load we stamp it
+	# into a cookie, and every subsequent asset request plus the /websockify
+	# WebSocket upgrade authenticates via that cookie (cookies ride same-origin
+	# WS handshakes). Result: the watch_url is a plain clickable link that works
+	# in any browser with no prompt. The token equals the shared auth_token, so
+	# it's no more sensitive than the basic-auth password it replaces here.
+	@watch_authed expression `{http.request.uri.query.token} == "__AUTH_TOKEN__" || {http.request.cookie.sidekick_watch} == "__AUTH_TOKEN__"`
+	handle @watch_authed {
+		header +Set-Cookie "sidekick_watch=__AUTH_TOKEN__; Path=/; Max-Age=86400; HttpOnly; SameSite=Lax"
+		reverse_proxy 127.0.0.1:6080
+	}
+	# Fell through everything above (incl. an unauthed watch attempt) -> 401.
+	handle {
+		respond "Unauthorized — open the watch_url from your token (it carries ?token=...)." 401
+	}
+}

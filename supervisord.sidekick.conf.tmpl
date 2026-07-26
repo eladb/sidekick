@@ -1,0 +1,81 @@
+# Rendered into /etc/supervisor/conf.d/sidekick.conf by
+# configure-and-start.sh, which substitutes __AUTH_TOKEN__.
+
+[program:xvfb]
+command=/usr/bin/Xvfb :99 -screen 0 1280x800x24 -nolisten tcp
+autorestart=true
+priority=10
+stdout_logfile=/var/log/sidekick/xvfb.log
+stderr_logfile=/var/log/sidekick/xvfb.log
+
+[program:openbox]
+command=/usr/bin/openbox
+environment=DISPLAY=":99"
+autorestart=true
+priority=20
+stdout_logfile=/var/log/sidekick/openbox.log
+stderr_logfile=/var/log/sidekick/openbox.log
+
+[program:chromium]
+command=/usr/bin/chromium --remote-debugging-port=9222 --remote-debugging-address=0.0.0.0 --remote-allow-origins=* --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1280,800 --start-maximized about:blank
+environment=DISPLAY=":99"
+autorestart=true
+priority=30
+stdout_logfile=/var/log/sidekick/chromium.log
+stderr_logfile=/var/log/sidekick/chromium.log
+
+# Watch-along: x11vnc exposes display :99 as VNC on localhost:5900; websockify
+# serves the noVNC web client and bridges the browser WebSocket to that VNC
+# port on :6080. Caddy fronts :6080 at the root path with basic_auth. No
+# password on x11vnc itself — it's localhost-only and gated by Caddy.
+[program:x11vnc]
+command=/usr/bin/x11vnc -display :99 -forever -shared -rfbport 5900 -localhost -nopw -quiet
+environment=DISPLAY=":99"
+autorestart=true
+priority=40
+stdout_logfile=/var/log/sidekick/x11vnc.log
+stderr_logfile=/var/log/sidekick/x11vnc.log
+
+[program:novnc]
+command=/usr/bin/websockify --web=/usr/share/novnc 6080 localhost:5900
+autorestart=true
+priority=45
+stdout_logfile=/var/log/sidekick/novnc.log
+stderr_logfile=/var/log/sidekick/novnc.log
+
+[program:ttyd]
+command=/usr/local/bin/ttyd -p 7681 -b /shell -c sidekick:__AUTH_TOKEN__ bash
+autorestart=true
+priority=40
+stdout_logfile=/var/log/sidekick/ttyd.log
+stderr_logfile=/var/log/sidekick/ttyd.log
+
+[program:execd]
+command=/usr/bin/python3 /opt/sidekick/execd/execd.py
+environment=SIDEKICK_AUTH_TOKEN="__AUTH_TOKEN__",SIDEKICK_EXECD_PORT="8090"
+autorestart=true
+priority=40
+stdout_logfile=/var/log/sidekick/execd.log
+stderr_logfile=/var/log/sidekick/execd.log
+
+[program:caddy]
+command=/usr/bin/caddy run --config /etc/sidekick/Caddyfile --adapter caddyfile
+autorestart=true
+priority=50
+stdout_logfile=/var/log/sidekick/caddy.log
+stderr_logfile=/var/log/sidekick/caddy.log
+
+[program:cloudflared]
+command=/usr/bin/cloudflared tunnel --url http://localhost:80 --no-autoupdate --logfile /var/log/sidekick/cloudflared.log
+autorestart=true
+priority=60
+stdout_logfile=/var/log/sidekick/cloudflared-stdout.log
+stderr_logfile=/var/log/sidekick/cloudflared-stdout.log
+
+[program:tunnel-watcher]
+command=/usr/local/bin/sidekick-tunnel-watcher
+environment=SERVER_ID="__SERVER_ID__",SIDEKICK_RENDEZVOUS_URL="__RENDEZVOUS_URL__",SIDEKICK_RENDEZVOUS_SECRET="__RENDEZVOUS_SECRET__"
+autorestart=true
+priority=70
+stdout_logfile=/var/log/sidekick/tunnel-watcher.log
+stderr_logfile=/var/log/sidekick/tunnel-watcher.log
