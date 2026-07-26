@@ -1,27 +1,33 @@
 # sidekick
 
-**A persistent server your AI agent deploys for itself — a remote, scriptable
-Chromium browser, a live watch-along view, and a shell/exec API, all over a
-free Cloudflare Tunnel. No inbound ports, no SSH, no Docker required.**
+**A self-hosted sidekick server for your AI agent — not rented by the second.**
+Your agent deploys one persistent machine it can drive and come back to: a
+scriptable Chromium browser, a live watch-along view, and a shell/exec API,
+all over a free Cloudflare Tunnel. No inbound ports, no SSH, no per-second bill.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Container image](https://img.shields.io/badge/ghcr.io-eladb%2Fsidekick-blue)](https://github.com/eladb/sidekick/pkgs/container/sidekick)
 [![Publish image](https://github.com/eladb/sidekick/actions/workflows/publish.yml/badge.svg)](https://github.com/eladb/sidekick/actions/workflows/publish.yml)
 
-A self-hosted "agent sidekick" server: a persistent box your AI agent can
-deploy for itself and keep coming back to across sessions. It ships with a
-remote, CDP-drivable browser, a live watch-along view, and a shell/exec
-API — all exposed through a free Cloudflare Tunnel, with no inbound ports,
-no SSH, and no Docker required on the box.
+- **Designed for agents.** One token is all your agent needs — hand it over as
+  `SIDEKICK_TOKEN` and it reconnects to the same browser and shell from any
+  future session. CDP for Playwright/Puppeteer, plus a clean `/exec` API.
+- **Self-hosted, not rented.** Runs on *your* fly.io, EC2, Hetzner, or Docker
+  host — no SaaS, no per-second billing, no vendor lock-in. A free Cloudflare
+  quick tunnel is the only ingress: no inbound ports, no SSH.
+- **Watch it work.** A live watch-along view (noVNC) opens in any browser tab —
+  see the agent drive Chromium in real time, even on hosts with no public IP.
 
 ## Why
 
-AI agents are stateless between sessions — every run starts from a blank box.
-sidekick gives an agent one persistent machine of its own: it deploys the
-server once, gets back a single token, and reconnects to the *same* browser
-and shell from any future session, anywhere. Because everything rides a
-Cloudflare quick tunnel, it works even on hosts with no public IP and nothing
-to SSH into — and you can watch it work in real time from a browser tab.
+AI agents are stateless between sessions — every run starts from a blank
+machine. Hosted agent-sandbox services solve that by renting you one, metered
+by the second. sidekick takes the other path: the persistent machine is *yours*.
+Your agent deploys the server once onto infrastructure you already have, gets
+back a single token, and reconnects to the *same* browser and shell from any
+future session — no SaaS in the middle, no meter running. Because everything
+rides a Cloudflare quick tunnel, it works even on hosts with no public IP and
+nothing to SSH into — and you can watch it work in real time from a browser tab.
 
 ## Demo
 
