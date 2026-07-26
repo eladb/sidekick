@@ -146,7 +146,7 @@ shipping Selkies build requires a heavy GStreamer stack and a TURN relay for
 its media path to cross the tunnel; noVNC is the simpler, tunnel-native
 choice.)
 
-## Known limitations (MVP)
+## Known limitations
 
 - The Cloudflare **quick tunnel URL is stable only as long as the process
   doesn't restart** — a crash/restart gets a new `trycloudflare.com`
