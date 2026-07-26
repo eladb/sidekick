@@ -161,8 +161,15 @@ choice.)
   (`scripts/lib/rendezvous.sh`). This means the Hetzner installer must run
   somewhere with outbound reach to Cloudflare's edge (TCP/UDP 7844); in a
   locked-down sandbox that blocks it, run the Hetzner deploy from a host with
-  open egress. The other platforms don't need this — they scrape logs and
-  work anywhere.
+  open egress. Docker and fly.io don't need this — they read logs directly.
+- **EC2 URL-discovery is unverified.** `scripts/platforms/ec2.sh` is
+  implemented (Debian AMI lookup, no-inbound security group, source install via
+  cloud-init) and scrapes the tunnel URL from `aws ec2 get-console-output`, but
+  this path has **not** been exercised end-to-end (no AWS credentials were
+  available during development). EC2's serial console *should* surface the
+  `/dev/console` sentinel the tunnel-watcher writes, but if it doesn't, the same
+  return-path rendezvous used for Hetzner (`scripts/lib/rendezvous.sh`) is a
+  drop-in fix. Treat EC2 as beta until confirmed on a real account.
 - Debian 12 is the target OS (Ubuntu's `chromium-browser` package is a snap
   wrapper that doesn't work in a container or a minimal cloud-init install).
 - The watch-along view is video-only (no audio); noVNC/VNC doesn't carry
