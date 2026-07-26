@@ -1,8 +1,8 @@
 # sidekick
 
-**A persistent box your AI agent deploys for itself — remote browser, live
-watch-along, and shell/exec, over a free Cloudflare Tunnel. No inbound ports,
-no SSH, no Docker on the box.**
+**A persistent server your AI agent deploys for itself — a remote, scriptable
+Chromium browser, a live watch-along view, and a shell/exec API, all over a
+free Cloudflare Tunnel. No inbound ports, no SSH, no Docker required.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Container image](https://img.shields.io/badge/ghcr.io-eladb%2Fsidekick-blue)](https://github.com/eladb/sidekick/pkgs/container/sidekick)
