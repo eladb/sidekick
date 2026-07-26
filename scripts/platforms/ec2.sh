@@ -2,11 +2,16 @@
 # EC2, no SSH: cloud-init user-data does all setup (provision.sh +
 # configure-and-start.sh straight from the repo, bare-VM/systemd mode, no
 # Docker on the box). The tunnel URL is scraped via `aws ec2
-# get-console-output`, which is an HTTPS API call, not SSH — but note it is
-# NOT real-time (can lag ~a minute and doesn't stream), hence the generous
-# timeout below. No SSH key pair is created or needed: the security group
-# has no inbound rules at all, since ingress is entirely via the outbound
-# Cloudflare tunnel.
+# get-console-output --latest`, which is an HTTPS API call, not SSH.
+#
+# The `--latest` flag is REQUIRED: on Nitro-based instances (c5, t3, m5, ... —
+# i.e. essentially every current type, including the t3.small default) the
+# default get-console-output returns an empty/stale snapshot, and only
+# `--latest` returns the live serial console where tunnel-watcher's /dev/console
+# sentinel actually lands. It still isn't real-time (can lag a minute or two),
+# hence the generous timeout below. No SSH key pair is created or needed: the
+# security group has no inbound rules at all, since ingress is entirely via the
+# outbound Cloudflare tunnel.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../lib/common.sh
@@ -73,9 +78,9 @@ INSTANCE_ID="$(aws ec2 run-instances --region "$REGION" \
 echo "==> instance: $INSTANCE_ID"
 
 echo "==> waiting for tunnel URL (EC2 console output lags real time; this can take a few minutes)"
-BASE_URL="$(sidekick_wait_for_tunnel_url "aws ec2 get-console-output --region $REGION --instance-id $INSTANCE_ID --output text" 480)" || {
+BASE_URL="$(sidekick_wait_for_tunnel_url "aws ec2 get-console-output --region $REGION --instance-id $INSTANCE_ID --latest --output text" 480)" || {
   echo "error: timed out waiting for the tunnel URL." >&2
-  echo "Check manually: aws ec2 get-console-output --region $REGION --instance-id $INSTANCE_ID --output text" >&2
+  echo "Check manually: aws ec2 get-console-output --region $REGION --instance-id $INSTANCE_ID --latest --output text" >&2
   exit 1
 }
 
