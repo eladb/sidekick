@@ -38,10 +38,11 @@ IP and nothing to SSH into — and you can watch it work live from a browser tab
 
 ## Demo
 
-![An AI agent driving sidekick's remote Chromium through Hacker News, live over the Cloudflare tunnel](docs/launch/assets/watch-along.gif)
+![Left: an agent in a sandbox with no browser, driving sidekick over CDP. Right: the real remote browser reacting live over the Cloudflare tunnel](docs/launch/assets/watch-along.gif)
 
-*An agent driving sidekick's remote browser in real time — the watch-along view,
-streamed over the tunnel. No local browser, no public IP on the box.*
+*Left: an agent in a cloud sandbox with no browser of its own, driving sidekick
+over CDP (`connectOverCDP(cdp_url)`). Right: the real remote browser reacting in
+real time — the watch-along view, streamed over the tunnel.*
 
 ## Quickstart
 
