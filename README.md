@@ -1,9 +1,10 @@
 # sidekick
 
-**A self-hosted sidekick server for your AI agent — not rented by the second.**
-Your agent deploys one persistent machine it can drive and come back to: a
-scriptable Chromium browser, a live watch-along view, and a shell/exec API,
-all over a free Cloudflare Tunnel. No inbound ports, no SSH, no per-second bill.
+**Give your sandboxed cloud agent a real browser and a shell.** Sidekick is a
+self-hosted companion box your AI agent deploys for itself, adding the two things
+hosted agent environments withhold: a scriptable Chromium it can drive (with a
+live watch-along view) and a shell/exec API for long-running work — all over a
+free Cloudflare Tunnel. No inbound ports, no SSH.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Container image](https://img.shields.io/badge/ghcr.io-eladb%2Fsidekick-blue)](https://github.com/eladb/sidekick/pkgs/container/sidekick)
@@ -12,9 +13,10 @@ all over a free Cloudflare Tunnel. No inbound ports, no SSH, no per-second bill.
 - **Designed for agents.** One token is all your agent needs — hand it over as
   `SIDEKICK_TOKEN` and it reconnects to the same browser and shell from any
   future session. CDP for Playwright/Puppeteer, plus a clean `/exec` API.
-- **Self-hosted, not rented.** Runs on *your* fly.io, EC2, Hetzner, or Docker
-  host — no SaaS, no per-second billing, no vendor lock-in. A free Cloudflare
-  quick tunnel is the only ingress: no inbound ports, no SSH.
+- **Extends your setup, doesn't replace it.** Keep your agent in the lean,
+  zero-setup environment it already runs in — sidekick just attaches the missing
+  capabilities. Self-hosted on *your* fly.io, EC2, Hetzner, or Docker host: no
+  SaaS, no per-second billing, no vendor lock-in.
 - **Watch it work.** A live watch-along view (noVNC) opens in any browser tab —
   see the agent drive Chromium in real time, even on hosts with no public IP.
 
