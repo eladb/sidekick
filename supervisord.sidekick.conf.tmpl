@@ -92,3 +92,30 @@ autorestart=true
 priority=70
 stdout_logfile=/var/log/sidekick/tunnel-watcher.log
 stderr_logfile=/var/log/sidekick/tunnel-watcher.log
+
+# --- Webapp hosting (static + CGI) on a second, public tunnel ---------------
+# fcgiwrap executes CGI scripts under /srv/sidekick/cgi-bin; Caddy's :8080 site
+# talks FastCGI to it (see Caddyfile). spawn-fcgi keeps it in the foreground so
+# supervisord can manage it.
+[program:fcgiwrap]
+command=/usr/bin/spawn-fcgi -n -a 127.0.0.1 -p 9000 -- /usr/sbin/fcgiwrap
+autorestart=true
+priority=45
+stdout_logfile=/var/log/sidekick/fcgiwrap.log
+stderr_logfile=/var/log/sidekick/fcgiwrap.log
+
+# Second cloudflared quick tunnel dedicated to the public webapp (Caddy :8080).
+[program:webapp-tunnel]
+command=/usr/bin/cloudflared tunnel --url http://localhost:8080 --no-autoupdate --logfile /var/log/sidekick/webapp-cloudflared.log
+autorestart=true
+priority=60
+stdout_logfile=/var/log/sidekick/webapp-cloudflared-stdout.log
+stderr_logfile=/var/log/sidekick/webapp-cloudflared-stdout.log
+
+[program:webapp-tunnel-watcher]
+command=/usr/local/bin/sidekick-tunnel-watcher
+environment=SERVER_ID="__SERVER_ID__",SIDEKICK_CLOUDFLARED_LOG="/var/log/sidekick/webapp-cloudflared.log",SIDEKICK_URL_SENTINEL="SIDEKICK_WEBAPP_URL",SIDEKICK_RENDEZVOUS_FIELD="webapp_url",SIDEKICK_RENDEZVOUS_URL="__RENDEZVOUS_URL__",SIDEKICK_RENDEZVOUS_SECRET="__RENDEZVOUS_SECRET__"
+autorestart=true
+priority=70
+stdout_logfile=/var/log/sidekick/webapp-tunnel-watcher.log
+stderr_logfile=/var/log/sidekick/webapp-tunnel-watcher.log

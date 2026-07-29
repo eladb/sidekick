@@ -84,6 +84,7 @@ BASE_URL="$(sidekick_wait_for_tunnel_url "aws ec2 get-console-output --region $R
   exit 1
 }
 
+WEBAPP_URL="$(sidekick_wait_for_tunnel_url "aws ec2 get-console-output --region $REGION --instance-id $INSTANCE_ID --latest --output text" 120 SIDEKICK_WEBAPP_URL || true)"
 CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
-TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "ec2" "$CREATED_AT")"
-sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}"
+TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "ec2" "$CREATED_AT" "$WEBAPP_URL")"
+sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}" "$WEBAPP_URL"

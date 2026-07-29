@@ -73,6 +73,22 @@ API — no `flyctl` needed, just a token like Hetzner's `hcloud`. Hetzner needs
 URL back over a return-path tunnel the installer runs; see the note in "Known
 limitations".)
 
+## Use it with your agent (the skill)
+
+The repo ships a Claude Code **skill** (`.claude/skills/sidekick/`). Point your
+coding agent at this repository and it can:
+
+1. **Set up a sidekick** — either deploy a new one (`scripts/install.sh …`) or
+   connect to an existing one (drop a `SIDEKICK_TOKEN` in its env / paste a
+   token).
+2. **Install the skill into itself** (`~/.claude/skills/`) so it can drive your
+   sidekick from **any** future project — not just this repo.
+3. **Drive every capability** — connect Playwright to the browser, run commands,
+   open the watch view, and deploy webapps — using just the token.
+
+So the flow is: *point agent → "set up sidekick" → it deploys or connects, keeps
+the skill, and knows how to use the box from then on.*
+
 ## The token
 
 The token is `base64url(JSON)`. Decoded, it looks like:
@@ -87,16 +103,19 @@ The token is `base64url(JSON)`. Decoded, it looks like:
   "watch_url": "https://xxxx.trycloudflare.com/vnc.html?autoconnect=true&reconnect=true&token=…",
   "shell_url": "https://sidekick:…@xxxx.trycloudflare.com/shell",
   "exec_url": "https://sidekick:…@xxxx.trycloudflare.com/exec",
+  "webapp_url": "https://yyyy.trycloudflare.com",
   "platform": "fly",
   "created_at": "2026-07-14T00:00:00Z"
 }
 ```
 
-Every service is gated by the same secret (`auth_token`), so each `*_url` is
-ready to use as-is. The programmatic URLs (`cdp_url`, `shell_url`, `exec_url`)
-embed it as HTTP Basic Auth (username `sidekick`); the `watch_url` carries it as
-a `?token=` query param instead, because it's meant to be opened in a browser
-and browsers strip the credentials from `user:pass@host` URLs.
+The control services are gated by the same secret (`auth_token`), so each
+`*_url` is ready to use as-is. The programmatic URLs (`cdp_url`, `shell_url`,
+`exec_url`) embed it as HTTP Basic Auth (username `sidekick`); the `watch_url`
+carries it as a `?token=` query param instead, because it's meant to be opened
+in a browser and browsers strip the credentials from `user:pass@host` URLs. The
+`webapp_url` is **public and unauthenticated** — it's a separate tunnel for
+serving your own webapp to end users (see "Webapp hosting").
 
 - **`cdp_url`** — point Playwright/Puppeteer at this
   (`chromium.connectOverCDP(cdp_url)`) to drive the remote browser.
@@ -109,6 +128,8 @@ and browsers strip the credentials from `user:pass@host` URLs.
   (`bash -lc`), so pipes, `&&`, and redirection work. Response is
   newline-delimited JSON: `{"stream":"stdout"|"stderr","data":"..."}` lines
   followed by `{"exit_code": N}`.
+- **`webapp_url`** — the public root URL of your hosted webapp (static + CGI),
+  on its own tunnel with no auth. See "Webapp hosting".
 
 **The token is a root-equivalent bearer credential.** Anyone who has it can
 run arbitrary commands on the box. Treat it exactly like an SSH private key
@@ -137,14 +158,17 @@ on fly's shared CPUs — handy for hacking on `provision.sh` from a branch). So 
 platform is locked to a published artifact, and the bare-VM path needs no
 registry at all.
 
-Cloudflare's free quick tunnel (`cloudflared tunnel --url ...`) is the only
+Cloudflare's free quick tunnels (`cloudflared tunnel --url ...`) are the only
 ingress path — no inbound ports are opened anywhere, which is also why none
 of the platform scripts use SSH: there's nothing to SSH into from the
 outside, and the box needs no SSH out either. The interactive shell
 (`ttyd`) and exec API (`execd`) exist specifically to give an agent
-SSH-equivalent access over that same HTTP(S)/WebSocket tunnel.
+SSH-equivalent access over that same HTTP(S)/WebSocket tunnel. There are two
+tunnels: the **control** tunnel (Caddy `:80`, token-gated — browser, watch,
+shell, exec) and the **webapp** tunnel (Caddy `:8080`, public — your hosted
+static + CGI app).
 
-Caddy fronts everything on port 80 behind the tunnel:
+Caddy fronts the control services on port 80 behind the control tunnel:
 
 | Path                     | Backend            | Auth                          |
 |---------------------------|---------------------|-------------------------------|
@@ -197,6 +221,40 @@ shipping Selkies build requires a heavy GStreamer stack and a TURN relay for
 its media path to cross the tunnel; noVNC is the simpler, tunnel-native
 choice.)
 
+## Webapp hosting
+
+Alongside the browser, the box can serve **your own webapp** — static frontend
+plus a dynamic backend — on its **own public Cloudflare URL** (`webapp_url` in
+the token), separate from the token-gated control surface. It's a second Caddy
+site behind a second `cloudflared` quick tunnel, and it's **unauthenticated by
+design** (it's meant to be served to end users).
+
+Deploy by writing files — the agent already has `shell`/`exec` access:
+
+- **Static** → drop files in `/srv/sidekick/www`. `index.html` is served at `/`.
+- **Backend (CGI)** → drop an **executable** script in `/srv/sidekick/cgi-bin`;
+  it runs per-request at `/cgi-bin/<name>` and can be written in anything
+  (bash, python, …). It reads the request from the standard CGI environment
+  (`REQUEST_METHOD`, `QUERY_STRING`, stdin for POST bodies, …) and prints
+  headers + a blank line + the body. Under the hood Caddy speaks FastCGI to
+  `fcgiwrap`, which executes the script — so no long-running server or port to
+  manage, and stock Caddy stays unmodified.
+
+```bash
+# a one-file JSON backend
+cat > /srv/sidekick/cgi-bin/api <<'EOF'
+#!/usr/bin/env bash
+echo "Content-Type: application/json"; echo
+echo "{\"ok\": true, \"method\": \"$REQUEST_METHOD\"}"
+EOF
+chmod +x /srv/sidekick/cgi-bin/api
+# now live at  https://<webapp_url>/cgi-bin/api
+```
+
+The box ships a default landing page and an example `/cgi-bin/hello` script;
+overwrite them with your own. (v1 is a single webapp slot; named multi-app
+hosting can come later.)
+
 ## Known limitations
 
 - The Cloudflare **quick tunnel URL is stable only as long as the process
@@ -225,6 +283,8 @@ choice.)
 
 ## Roadmap
 
-More services are planned to run alongside the browser on the same box —
-starting with a Caddy-hosted webapp/CGI server — reusing the same
-`provision.sh` + supervisord + token pattern established here.
+More services are planned to run alongside the browser on the same box,
+reusing the same `provision.sh` + supervisord + token pattern established here.
+The first — a Caddy-hosted webapp/CGI server — has shipped (see "Webapp
+hosting"); named multi-app hosting and a stable named-tunnel option are natural
+next steps.

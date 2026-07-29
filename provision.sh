@@ -41,7 +41,8 @@ apt-get install -y --no-install-recommends \
   chromium \
   xvfb openbox xserver-xorg-core x11-utils x11-xkb-utils x11-xserver-utils \
   libx11-xcb1 libxcb-dri3-0 libxkbcommon0 libxdamage1 libxfixes3 libxtst6 libxext6 \
-  x11vnc novnc websockify
+  x11vnc novnc websockify \
+  fcgiwrap spawn-fcgi
 
 ARCH="$(dpkg --print-architecture)"
 # ttyd's release assets are named by uname-style arch (x86_64/aarch64), not
@@ -98,6 +99,41 @@ cp "$(dirname "$0")/scripts/tunnel-watcher.sh" /usr/local/bin/sidekick-tunnel-wa
 chmod +x /usr/local/bin/sidekick-tunnel-watcher
 cp "$(dirname "$0")/configure-and-start.sh" /usr/local/bin/sidekick-configure-and-start
 chmod +x /usr/local/bin/sidekick-configure-and-start
+
+log "scaffolding the webapp docroot (static + CGI)"
+# The public webapp site (Caddy :8080) serves static files from
+# /srv/sidekick/www and runs executables under /srv/sidekick/cgi-bin as CGI.
+# Deploy your app by writing files into these dirs (over shell/exec). The
+# guards below make this idempotent and never clobber a deployed app on re-run.
+mkdir -p /srv/sidekick/www /srv/sidekick/cgi-bin
+if [ ! -e /srv/sidekick/www/index.html ]; then
+  cat > /srv/sidekick/www/index.html <<'HTML'
+<!doctype html>
+<html>
+  <head><meta charset="utf-8"><title>sidekick webapp</title></head>
+  <body style="font-family:system-ui;max-width:40rem;margin:4rem auto;padding:0 1rem">
+    <h1>sidekick webapp</h1>
+    <p>This is the default page. Replace it by writing files to
+       <code>/srv/sidekick/www</code>.</p>
+    <p>Dynamic backends: drop an executable script in
+       <code>/srv/sidekick/cgi-bin</code> and it runs as CGI, e.g.
+       <a href="/cgi-bin/hello">/cgi-bin/hello</a>.</p>
+  </body>
+</html>
+HTML
+fi
+if [ ! -e /srv/sidekick/cgi-bin/hello ]; then
+  cat > /srv/sidekick/cgi-bin/hello <<'CGI'
+#!/usr/bin/env bash
+# Example CGI script. Print CGI headers, a blank line, then the body.
+echo "Content-Type: text/plain"
+echo
+echo "hello from a sidekick CGI script"
+echo "method: ${REQUEST_METHOD:-?}"
+echo "query:  ${QUERY_STRING:-}"
+CGI
+  chmod +x /srv/sidekick/cgi-bin/hello
+fi
 
 log "cleaning up apt caches"
 apt-get clean

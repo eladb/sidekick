@@ -63,6 +63,7 @@ BASE_URL="$(sidekick_rendezvous_wait 360)" || {
   exit 1
 }
 
+WEBAPP_URL="$(sidekick_rendezvous_webapp_url 60)"
 CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
-TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "hetzner" "$CREATED_AT")"
-sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}"
+TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "hetzner" "$CREATED_AT" "$WEBAPP_URL")"
+sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}" "$WEBAPP_URL"

@@ -78,3 +78,35 @@
 		respond "Unauthorized — open the watch_url from your token (it carries ?token=...)." 401
 	}
 }
+
+# ---------------------------------------------------------------------------
+# Webapp site (PUBLIC, no auth) — served on :8080 behind its own cloudflared
+# tunnel (see supervisord). This is where a user's deployed webapp lives:
+# static files under /srv/sidekick/www, and per-request CGI scripts under
+# /srv/sidekick/cgi-bin executed via fcgiwrap (FastCGI). It's intentionally
+# unauthenticated — it's meant to be served to end users. Deploy by writing
+# files into those directories (the agent already has shell/exec access).
+:8080 {
+	root * /srv/sidekick/www
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	# Dynamic backend: executables under /srv/sidekick/cgi-bin run as CGI.
+	# Caddy speaks FastCGI to fcgiwrap, which execs the script named by
+	# SCRIPT_FILENAME. {path} is /cgi-bin/<script>, so the script file resolves
+	# to /srv/sidekick/cgi-bin/<script>.
+	handle /cgi-bin/* {
+		reverse_proxy 127.0.0.1:9000 {
+			transport fastcgi {
+				env SCRIPT_FILENAME /srv/sidekick{path}
+			}
+		}
+	}
+
+	# Static frontend (serves index.html for directories).
+	handle {
+		file_server
+	}
+}

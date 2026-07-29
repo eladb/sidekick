@@ -73,7 +73,7 @@ sidekick_rendezvous_start() {
   return 1
 }
 
-# Waits for the box to report its URL; echoes base_url on stdout.
+# Waits for the box to report its control URL; echoes base_url on stdout.
 sidekick_rendezvous_wait() {
   local timeout_sec="${1:-300}" waited=0
   while [ "$waited" -lt "$timeout_sec" ]; do
@@ -86,6 +86,18 @@ sidekick_rendezvous_wait() {
     waited=$((waited + 5))
   done
   return 1
+}
+
+# Best-effort: echoes the public webapp URL if the box reported one, else empty.
+# The webapp tunnel usually registers a few seconds behind the control tunnel.
+sidekick_rendezvous_webapp_url() {
+  local timeout_sec="${1:-60}" waited=0 f="${SIDEKICK_RV_RESULT_FILE}.webapp"
+  while [ "$waited" -lt "$timeout_sec" ]; do
+    [ -s "$f" ] && { cat "$f"; return 0; }
+    sleep 5
+    waited=$((waited + 5))
+  done
+  return 0
 }
 
 sidekick_rendezvous_cleanup() {

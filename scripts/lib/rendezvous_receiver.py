@@ -45,13 +45,19 @@ class Handler(BaseHTTPRequestHandler):
         try:
             length = int(self.headers.get("Content-Length", "0"))
             payload = json.loads(self.rfile.read(length) or b"{}")
-            base_url = str(payload.get("base_url", "")).strip()
         except (ValueError, TypeError):
             return self._reply(400, "bad request")
-        if not base_url.startswith("https://"):
-            return self._reply(400, "missing base_url")
-        with open(RESULT_FILE, "w", encoding="utf-8") as fh:
-            fh.write(base_url)
+        # The box has two independent watchers (control + webapp tunnel); each
+        # POSTs its own field, so accumulate them into separate files.
+        wrote = False
+        for field, path in (("base_url", RESULT_FILE), ("webapp_url", RESULT_FILE + ".webapp")):
+            val = str(payload.get(field, "")).strip()
+            if val.startswith("https://"):
+                with open(path, "w", encoding="utf-8") as fh:
+                    fh.write(val)
+                wrote = True
+        if not wrote:
+            return self._reply(400, "no url fields")
         self._reply(200, "ok")
 
 
