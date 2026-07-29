@@ -37,6 +37,16 @@ sidekick is a remote-access server. Understand what it exposes:
   privileged user. That is by design — the whole point is SSH-equivalent
   access — but it means the token is a full remote-code-execution grant.
 
+- **The hosted webapp (`webapp_url`) is public and unauthenticated by design.**
+  It's a separate tunnel for serving your app to end users. Anything you place
+  in `/srv/sidekick/www` is world-readable, and any executable in
+  `/srv/sidekick/cgi-bin` runs per-request as the box's user with whatever the
+  request supplies — so a buggy or injectable CGI script is an exposed
+  remote-code path on the same box as your browser/session. You own the safety
+  of what you deploy there; don't put secrets in the docroot, and validate CGI
+  input. The `webapp_url` hostname is discoverable, so treat the webapp as
+  internet-facing.
+
 ## Supported versions
 
 This is an evolving project; only the latest `main` is supported. Pin a
