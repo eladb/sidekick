@@ -1,10 +1,48 @@
 # sidekick
 
-A self-hosted "agent sidekick" server: a persistent box your AI agent can
-deploy for itself and keep coming back to across sessions. It ships with a
-remote, CDP-drivable browser, a live watch-along view, and a shell/exec
-API — all exposed through a free Cloudflare Tunnel, with no inbound ports,
-no SSH, and no Docker required on the box.
+**Give your sandboxed cloud agent a real browser and a shell.** Sidekick is a
+self-hosted companion box your AI agent deploys for itself, adding the two things
+hosted agent environments withhold: a scriptable Chromium it can drive (with a
+live watch-along view) and a shell/exec API for long-running work — all over a
+free Cloudflare Tunnel. No inbound ports, no SSH.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Container image](https://img.shields.io/badge/ghcr.io-eladb%2Fsidekick-blue)](https://github.com/eladb/sidekick/pkgs/container/sidekick)
+[![Publish image](https://github.com/eladb/sidekick/actions/workflows/publish.yml/badge.svg)](https://github.com/eladb/sidekick/actions/workflows/publish.yml)
+
+- **Designed for agents.** One token is all your agent needs — hand it over as
+  `SIDEKICK_TOKEN` and it reconnects to the same browser and shell from any
+  future session. CDP for Playwright/Puppeteer, plus a clean `/exec` API.
+- **Extends your setup, doesn't replace it.** Keep your agent in the lean,
+  zero-setup environment it already runs in — sidekick just attaches the missing
+  capabilities. Self-hosted on *your* fly.io, EC2, Hetzner, or Docker host: no
+  SaaS, no per-second billing, no vendor lock-in.
+- **Watch it work.** A live watch-along view (noVNC) opens in any browser tab —
+  see the agent drive Chromium in real time, even on hosts with no public IP.
+
+## Why
+
+AI agents increasingly run in the background on hosted cloud environments —
+they spin up, do work unattended, and spin down. Those environments are
+deliberately bare-bones and sandboxed: no real web browsing, and nothing that
+installs or stays running for long. The common workaround is to move the agent
+into a full sandbox service that gives it a whole managed VM to live in.
+
+sidekick takes the leaner path: leave the agent in the zero-setup environment it
+already runs in, and attach one self-hosted companion box that adds *only* the
+two missing pieces — a real Chromium the agent can drive, and a shell/exec for
+long-running installs and services. The agent deploys it once, gets back a
+single token, and reconnects to the same box from any future session. Everything
+rides a free Cloudflare quick tunnel, so it works even on hosts with no public
+IP and nothing to SSH into — and you can watch it work live from a browser tab.
+
+## Demo
+
+![Left: an agent in a sandbox with no browser, driving sidekick over CDP. Right: the real remote browser reacting live over the Cloudflare tunnel](docs/launch/assets/watch-along.gif)
+
+*Left: an agent in a cloud sandbox with no browser of its own, driving sidekick
+over CDP (`connectOverCDP(cdp_url)`). Right: the real remote browser reacting in
+real time — the watch-along view, streamed over the tunnel.*
 
 ## Quickstart
 
