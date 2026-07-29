@@ -44,6 +44,7 @@ BASE_URL="$(sidekick_wait_for_tunnel_url "docker logs $CONTAINER_NAME" 180)" || 
   exit 1
 }
 
+WEBAPP_URL="$(sidekick_wait_for_tunnel_url "docker logs $CONTAINER_NAME" 120 SIDEKICK_WEBAPP_URL || true)"
 CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
-TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "docker" "$CREATED_AT")"
-sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}"
+TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "docker" "$CREATED_AT" "$WEBAPP_URL")"
+sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}" "$WEBAPP_URL"

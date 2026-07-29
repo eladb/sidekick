@@ -106,6 +106,15 @@ while [ "$waited" -lt "$timeout" ]; do
 done
 [ -n "$BASE_URL" ] || { echo "error: timed out waiting for the server/tunnel on fly." >&2; exit 1; }
 
+# The public webapp tunnel usually comes up a few seconds behind the control
+# tunnel; give it a short window (best-effort — don't fail the deploy over it).
+WEBAPP_URL=""; wwaited=0
+while [ "$wwaited" -lt 60 ]; do
+  WEBAPP_URL="$(fly_exec 'grep -oE "https://[a-z0-9-]+\.trycloudflare\.com" /var/log/sidekick/webapp-cloudflared.log | head -1')"
+  [ -n "$WEBAPP_URL" ] && break
+  sleep 10; wwaited=$((wwaited + 10))
+done
+
 CREATED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
-TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "fly" "$CREATED_AT")"
-sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}"
+TOKEN="$(sidekick_build_token "$SERVER_ID" "$BASE_URL" "$AUTH_TOKEN" "fly" "$CREATED_AT" "$WEBAPP_URL")"
+sidekick_print_summary "$TOKEN" "$BASE_URL" "${SIDEKICK_TOKEN_FILE:-./sidekick-token.txt}" "$WEBAPP_URL"
