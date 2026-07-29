@@ -86,6 +86,10 @@ log "installing execd (bundled, no external deps)"
 mkdir -p "$SIDEKICK_HOME/execd"
 cp "$(dirname "$0")/services/execd/execd.py" "$SIDEKICK_HOME/execd/execd.py"
 
+log "installing cdpjson shim (bundled, no external deps)"
+mkdir -p "$SIDEKICK_HOME/cdpjson"
+cp "$(dirname "$0")/services/cdpjson/cdpjson.py" "$SIDEKICK_HOME/cdpjson/cdpjson.py"
+
 log "laying down config templates"
 mkdir -p /etc/sidekick
 cp "$(dirname "$0")/Caddyfile.tmpl" /etc/sidekick/Caddyfile.tmpl
