@@ -20,14 +20,19 @@ all over a free Cloudflare Tunnel. No inbound ports, no SSH, no per-second bill.
 
 ## Why
 
-AI agents are stateless between sessions — every run starts from a blank
-machine. Hosted agent-sandbox services solve that by renting you one, metered
-by the second. sidekick takes the other path: the persistent machine is *yours*.
-Your agent deploys the server once onto infrastructure you already have, gets
-back a single token, and reconnects to the *same* browser and shell from any
-future session — no SaaS in the middle, no meter running. Because everything
-rides a Cloudflare quick tunnel, it works even on hosts with no public IP and
-nothing to SSH into — and you can watch it work in real time from a browser tab.
+AI agents increasingly run in the background on hosted cloud environments —
+they spin up, do work unattended, and spin down. Those environments are
+deliberately bare-bones and sandboxed: no real web browsing, and nothing that
+installs or stays running for long. The common workaround is to move the agent
+into a full sandbox service that gives it a whole managed VM to live in.
+
+sidekick takes the leaner path: leave the agent in the zero-setup environment it
+already runs in, and attach one self-hosted companion box that adds *only* the
+two missing pieces — a real Chromium the agent can drive, and a shell/exec for
+long-running installs and services. The agent deploys it once, gets back a
+single token, and reconnects to the same box from any future session. Everything
+rides a free Cloudflare quick tunnel, so it works even on hosts with no public
+IP and nothing to SSH into — and you can watch it work live from a browser tab.
 
 ## Demo
 
