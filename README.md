@@ -111,7 +111,8 @@ Caddy fronts everything on port 80 behind the tunnel:
 | Path                     | Backend            | Auth                          |
 |---------------------------|---------------------|-------------------------------|
 | `/healthz`                | —                   | none                          |
-| `/json*`, `/devtools/*`   | Chromium CDP (9222) | Caddy `basicauth`             |
+| `/json*`                  | cdpjson shim (9223) | Caddy `basicauth`             |
+| `/devtools/*`             | Chromium CDP (9222) | Caddy `basicauth`             |
 | `/exec`                   | execd (8090)        | checked by execd itself       |
 | `/shell*`                 | ttyd (7681)         | checked by ttyd itself        |
 | everything else (root)    | noVNC (6080)        | Caddy `?token=` + cookie      |
@@ -124,6 +125,18 @@ WebSocket connection. The noVNC viewer likewise lives at the root
 (`/vnc.html` + its assets + the `/websockify` WebSocket). `/exec` and
 `/shell` don't have that problem (execd is ours, and ttyd supports
 `--base-path`), so they get real prefixes.
+
+Two more CDP wrinkles, both from Chrome's DevTools host-header protection: it
+returns HTTP 500 for any request whose `Host` isn't localhost/an IP, and it
+echoes the `Host` it saw back into the `webSocketDebuggerUrl` it advertises.
+Behind the tunnel the `Host` is the public `trycloudflare` name, so a plain
+`reverse_proxy` to `:9222` both 500s and (once the Host is forced to localhost)
+advertises an unreachable `ws://localhost/...`. So `/json*` goes through a tiny
+stdlib shim (`services/cdpjson/cdpjson.py`) that fetches from Chrome with
+`Host: localhost` and rewrites the reported ws URL to the public host, while
+`/devtools/*` proxies straight to Chrome with `header_up Host localhost`. That
+keeps the documented `chromium.connectOverCDP(cdp_url)` working through the
+tunnel.
 
 ## Watch-along
 

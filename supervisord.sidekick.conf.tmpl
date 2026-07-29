@@ -24,6 +24,19 @@ priority=30
 stdout_logfile=/var/log/sidekick/chromium.log
 stderr_logfile=/var/log/sidekick/chromium.log
 
+# cdpjson: stdlib shim in front of Chrome's /json* DevTools endpoints. Chrome
+# rejects non-localhost Host headers (HTTP 500) and echoes the Host into the
+# reported webSocketDebuggerUrl, which breaks connectOverCDP(cdp_url) through
+# the tunnel. This fetches with Host: localhost and rewrites the ws URL to the
+# public host. Caddy routes /json* here (with basic_auth); binds localhost only.
+[program:cdpjson]
+command=/usr/bin/python3 /opt/sidekick/cdpjson/cdpjson.py
+environment=SIDEKICK_CDPJSON_PORT="9223",SIDEKICK_CDP_UPSTREAM_PORT="9222"
+autorestart=true
+priority=35
+stdout_logfile=/var/log/sidekick/cdpjson.log
+stderr_logfile=/var/log/sidekick/cdpjson.log
+
 # Watch-along: x11vnc exposes display :99 as VNC on localhost:5900; websockify
 # serves the noVNC web client and bridges the browser WebSocket to that VNC
 # port on :6080. Caddy fronts :6080 at the root path with basic_auth. No

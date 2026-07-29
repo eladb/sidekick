@@ -23,17 +23,25 @@
 	# /json/version response reports these exact root paths with no way to
 	# tell it about a reverse-proxy prefix, so a prefixed route would break
 	# the follow-up WebSocket connection every CDP client makes.
+	#
+	# Chrome also rejects any DevTools HTTP request whose Host header isn't
+	# localhost/an IP (HTTP 500), and it echoes the Host it saw back into the
+	# reported webSocketDebuggerUrl. So /json* goes through the cdpjson shim
+	# (fetches with Host: localhost, rewrites the ws URL to the public host),
+	# and /devtools/* proxies straight to Chrome with Host forced to localhost.
 	handle /json* {
 		basic_auth {
 			sidekick __AUTH_TOKEN_BCRYPT_HASH__
 		}
-		reverse_proxy 127.0.0.1:9222
+		reverse_proxy 127.0.0.1:9223
 	}
 	handle /devtools/* {
 		basic_auth {
 			sidekick __AUTH_TOKEN_BCRYPT_HASH__
 		}
-		reverse_proxy 127.0.0.1:9222
+		reverse_proxy 127.0.0.1:9222 {
+			header_up Host localhost
+		}
 	}
 
 	# execd: agent-facing command exec API. Auth is checked in execd itself.
