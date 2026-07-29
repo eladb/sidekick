@@ -73,6 +73,22 @@ API — no `flyctl` needed, just a token like Hetzner's `hcloud`. Hetzner needs
 URL back over a return-path tunnel the installer runs; see the note in "Known
 limitations".)
 
+## Use it with your agent (the skill)
+
+The repo ships a Claude Code **skill** (`.claude/skills/sidekick/`). Point your
+coding agent at this repository and it can:
+
+1. **Set up a sidekick** — either deploy a new one (`scripts/install.sh …`) or
+   connect to an existing one (drop a `SIDEKICK_TOKEN` in its env / paste a
+   token).
+2. **Install the skill into itself** (`~/.claude/skills/`) so it can drive your
+   sidekick from **any** future project — not just this repo.
+3. **Drive every capability** — connect Playwright to the browser, run commands,
+   open the watch view, and deploy webapps — using just the token.
+
+So the flow is: *point agent → "set up sidekick" → it deploys or connects, keeps
+the skill, and knows how to use the box from then on.*
+
 ## The token
 
 The token is `base64url(JSON)`. Decoded, it looks like:
