@@ -38,13 +38,10 @@ IP and nothing to SSH into — and you can watch it work live from a browser tab
 
 ## Demo
 
-> **TODO (pre-launch):** drop a GIF/asciicast here. Two clips land best:
-> (1) `scripts/install.sh --platform fly` running end-to-end to the printed
-> token, and (2) the **watch-along** view showing the agent driving Chromium
-> live. A short (~15s) loop of the watch-along is the single highest-value
-> asset for the Show HN post.
+![An AI agent driving sidekick's remote Chromium through Hacker News, live over the Cloudflare tunnel](docs/launch/assets/watch-along.gif)
 
-<!-- ![watch-along demo](docs/launch/assets/watch-along.gif) -->
+*An agent driving sidekick's remote browser in real time — the watch-along view,
+streamed over the tunnel. No local browser, no public IP on the box.*
 
 ## Quickstart
 
