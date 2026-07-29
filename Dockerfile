@@ -7,6 +7,7 @@ FROM debian:bookworm-slim
 COPY provision.sh Caddyfile.tmpl supervisord.sidekick.conf.tmpl configure-and-start.sh /opt/sidekick-src/
 COPY scripts/tunnel-watcher.sh /opt/sidekick-src/scripts/tunnel-watcher.sh
 COPY services/execd/execd.py /opt/sidekick-src/services/execd/execd.py
+COPY services/cdpjson/cdpjson.py /opt/sidekick-src/services/cdpjson/cdpjson.py
 
 RUN chmod +x /opt/sidekick-src/provision.sh /opt/sidekick-src/configure-and-start.sh \
   && /opt/sidekick-src/provision.sh
